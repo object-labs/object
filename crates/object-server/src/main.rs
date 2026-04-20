@@ -5,7 +5,7 @@ use axum::{
     Router,
     extract::{Path, Query, State},
     http::StatusCode,
-    response::Json as JsonBody,
+    response::{Html as HtmlBody, Json as JsonBody},
     routing::{get, post},
 };
 use chrono::Utc;
@@ -18,6 +18,10 @@ use tower_http::cors::{Any, CorsLayer};
 use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::{EnvFilter, fmt};
+
+const API_BASE_PATH: &str = "/api";
+const CURRENT_API_VERSION: &str = "v1";
+const SUPPORTED_API_VERSIONS: [&str; 1] = [CURRENT_API_VERSION];
 
 type SharedState = Arc<RwLock<AppState>>;
 type JsonError = (StatusCode, JsonBody<ApiError>);
@@ -58,25 +62,24 @@ async fn main() {
         .init();
 
     let state = Arc::new(RwLock::new(seed_state()));
-    let api = Router::new()
-        .route("/health", get(health))
-        .route("/openapi.json", get(openapi_spec))
-        .route("/markets", get(list_markets))
-        .route("/markets/:market/orderbook", get(order_book))
-        .route("/orders", post(create_order).get(list_orders))
-        .route("/markets/:market/funding", get(funding_state))
-        .route("/markets/:market/positions", get(positions));
+    let mut api_router = Router::new().route("/", get(api_versions));
+    for version in SUPPORTED_API_VERSIONS.iter() {
+        api_router = api_router.nest(
+            &format!("/{version}"),
+            build_version_router(version, state.clone()),
+        );
+    }
 
     let app = Router::new()
-        .nest("/api", api)
+        .route("/", get(openapi_web_app))
+        .nest(API_BASE_PATH, api_router)
         .layer(TraceLayer::new_for_http())
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)
                 .allow_methods(Any)
                 .allow_headers(Any),
-        )
-        .with_state(state);
+        );
 
     let addr: SocketAddr = "0.0.0.0:3000".parse().expect("valid socket");
     info!("Object API server listening on {}", addr);
@@ -86,6 +89,18 @@ async fn main() {
     )
     .await
     .expect("server");
+}
+
+fn build_version_router(_version: &str, state: SharedState) -> Router {
+    Router::new()
+        .route("/health", get(health))
+        .route("/openapi.json", get(openapi_spec))
+        .route("/markets", get(list_markets))
+        .route("/markets/:market/orderbook", get(order_book))
+        .route("/orders", post(create_order).get(list_orders))
+        .route("/markets/:market/funding", get(funding_state))
+        .route("/markets/:market/positions", get(positions))
+        .with_state(state)
 }
 
 fn now_ms() -> u64 {
@@ -154,6 +169,15 @@ fn not_found(message: &str) -> JsonError {
 async fn health() -> JsonSuccess<String> {
     JsonBody(ApiResponse {
         data: "ok".to_string(),
+    })
+}
+
+async fn api_versions() -> JsonBody<ApiResponse<Vec<String>>> {
+    JsonBody(ApiResponse {
+        data: SUPPORTED_API_VERSIONS
+            .iter()
+            .map(|version| version.to_string())
+            .collect(),
     })
 }
 
@@ -299,4 +323,49 @@ async fn order_book(
             updated_at_ms: now_ms(),
         },
     }))
+}
+
+async fn openapi_web_app() -> HtmlBody<String> {
+    const OPENAPI_UI_TEMPLATE: &str = r#"<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Object API Explorer</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css"
+    />
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+      }
+      #swagger-ui {
+        min-height: 100vh;
+      }
+    </style>
+    </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+      window.addEventListener('load', function () {
+        const openapiUrl = new URL('{openapi_url}', window.location.href).toString();
+        window.ui = SwaggerUIBundle({
+          url: openapiUrl,
+          dom_id: '#swagger-ui',
+          presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+          layout: 'BaseLayout',
+          tryItOutEnabled: true,
+        });
+      });
+    </script>
+  </body>
+    </html>"#;
+    let openapi_url = format!("{API_BASE_PATH}/{CURRENT_API_VERSION}/openapi.json");
+    let html = OPENAPI_UI_TEMPLATE.replace("{openapi_url}", &openapi_url);
+
+    HtmlBody(html)
 }

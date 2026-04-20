@@ -134,13 +134,21 @@ From the repository root:
 ## Running the exchange stack
 
 - `just run-server` starts the Rust API server at `http://localhost:3000`.
-- `just run-frontend` starts the React app at `http://localhost:5173` and proxies `/api` to `http://localhost:3000`.
+- Visiting the root URL `http://localhost:3000/` opens the interactive OpenAPI web interface for the API.
+- `just run-frontend` starts the React app at `http://localhost:5173` and proxies `/api/v1` to `http://localhost:3000`.
 - `nix develop` provides Node.js 24 via the shell package set.
 
 For a single-command local stack run `just dev` (server and frontend).
 
-The OpenAPI document is consumed by the frontend through `/api/openapi.json` and the static
+The OpenAPI document is consumed by the frontend through `/api/v1/openapi.json` and the static
 spec at `api/openapi/object-openapi.json`.
+
+Versioning model:
+
+- Current public API is `v1` and is available under `/api/v1`.
+- `/api` returns the supported version list (`["v1"]`) to support service discovery.
+- To add a new version (for example `v2`), register it in `SUPPORTED_API_VERSIONS` in
+  `crates/object-server/src/main.rs` and add a versioned router entry.
 
 Generate frontend TypeScript API types from the OpenAPI contract with:
 

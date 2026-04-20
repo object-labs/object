@@ -15,7 +15,7 @@ import type {
   PositionsResponse,
 } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "/api/v1";
 
 async function toJson<T>(response: Response): Promise<T> {
   if (!response.ok) {
