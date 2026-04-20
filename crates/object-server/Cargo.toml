@@ -1,0 +1,15 @@
+[package]
+name = "object-server"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+axum = { version = "0.7", features = ["json", "macros"] }
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tower-http = { version = "0.5", features = ["cors", "fs", "trace"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+object-api = { path = "../object-api" }

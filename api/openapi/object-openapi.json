@@ -1,0 +1,400 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Object Exchange API",
+    "version": "0.1.0",
+    "description": "API for Object exchange runtime: spot, perpetual, and bridge-aware settlement surfaces."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Service health",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service is running",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "summary": "OpenAPI specification",
+        "operationId": "getOpenApi",
+        "responses": {
+          "200": {
+            "description": "OpenAPI document",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/markets": {
+      "get": {
+        "summary": "List markets",
+        "operationId": "listMarkets",
+        "responses": {
+          "200": {
+            "description": "Market list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketListResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/markets/{market}/orderbook": {
+      "get": {
+        "summary": "Get market orderbook snapshot",
+        "operationId": "getOrderBook",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current orderbook",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderBookResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Market not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "List orders",
+        "operationId": "listOrders",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Submit an order",
+        "operationId": "createOrder",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid order payload",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/markets/{market}/funding": {
+      "get": {
+        "summary": "Get latest funding state",
+        "operationId": "getFundingState",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Funding snapshot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FundingResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Funding not available",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/markets/{market}/positions": {
+      "get": {
+        "summary": "Get perpetual positions for a market",
+        "operationId": "getPositions",
+        "parameters": [
+          {
+            "name": "market",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Positions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PositionsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MessageResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "string"
+          }
+        },
+        "required": ["data"]
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": ["error"]
+      },
+      "Market": {
+        "type": "object",
+        "properties": {
+          "symbol": { "type": "string" },
+          "market_type": { "type": "string" },
+          "base_asset": { "type": "string" },
+          "quote_asset": { "type": "string" }
+        },
+        "required": ["symbol", "market_type", "base_asset", "quote_asset"]
+      },
+      "OrderSide": {
+        "type": "string",
+        "enum": ["buy", "sell"]
+      },
+      "OrderType": {
+        "type": "string",
+        "enum": ["market", "limit"]
+      },
+      "OrderInput": {
+        "type": "object",
+        "properties": {
+          "market": { "type": "string" },
+          "side": { "$ref": "#/components/schemas/OrderSide" },
+          "order_type": { "$ref": "#/components/schemas/OrderType" },
+          "size": { "type": "number", "format": "float" },
+          "price": { "type": "number", "format": "float", "nullable": true },
+          "reduce_only": { "type": "boolean" },
+          "account": { "type": "string" }
+        },
+        "required": ["market", "side", "order_type", "size", "reduce_only", "account"]
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "status": { "type": "string" },
+          "market": { "type": "string" },
+          "side": { "$ref": "#/components/schemas/OrderSide" },
+          "order_type": { "$ref": "#/components/schemas/OrderType" },
+          "size": { "type": "number", "format": "float" },
+          "price": { "type": "number", "format": "float", "nullable": true },
+          "reduce_only": { "type": "boolean" },
+          "account": { "type": "string" },
+          "created_at_ms": { "type": "integer", "format": "int64" }
+        },
+        "required": ["id", "status", "market", "side", "order_type", "size", "reduce_only", "account", "created_at_ms"]
+      },
+      "OrderLevel": {
+        "type": "object",
+        "properties": {
+          "price": { "type": "number", "format": "float" },
+          "size": { "type": "number", "format": "float" }
+        },
+        "required": ["price", "size"]
+      },
+      "OrderBook": {
+        "type": "object",
+        "properties": {
+          "market": { "type": "string" },
+          "bids": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OrderLevel" }
+          },
+          "asks": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OrderLevel" }
+          },
+          "updated_at_ms": { "type": "integer", "format": "int64" }
+        },
+        "required": ["market", "bids", "asks", "updated_at_ms"]
+      },
+      "PerpetualPosition": {
+        "type": "object",
+        "properties": {
+          "market": { "type": "string" },
+          "account": { "type": "string" },
+          "size": { "type": "number", "format": "float" },
+          "entry_price": { "type": "number", "format": "float" },
+          "unrealized_pnl": { "type": "number", "format": "float" },
+          "margin_used": { "type": "number", "format": "float" },
+          "mark_price": { "type": "number", "format": "float" }
+        },
+        "required": ["market", "account", "size", "entry_price", "unrealized_pnl", "margin_used", "mark_price"]
+      },
+      "FundingState": {
+        "type": "object",
+        "properties": {
+          "market": { "type": "string" },
+          "current_funding_rate": { "type": "number", "format": "float" },
+          "next_funding_interval_ms": { "type": "integer", "format": "int64" }
+        },
+        "required": ["market", "current_funding_rate", "next_funding_interval_ms"]
+      },
+      "MarketListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Market" }
+          }
+        },
+        "required": ["data"]
+      },
+      "OrderListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Order" }
+          }
+        },
+        "required": ["data"]
+      },
+      "OrderResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/Order" }
+        },
+        "required": ["data"]
+      },
+      "OrderBookResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/OrderBook" }
+        },
+        "required": ["data"]
+      },
+      "PositionsResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PerpetualPosition" }
+          }
+        },
+        "required": ["data"]
+      },
+      "FundingResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/FundingState" }
+        },
+        "required": ["data"]
+      }
+    }
+  }
+}

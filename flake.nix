@@ -27,15 +27,17 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        nodejs24 = pkgs.nodejs_24 or pkgs.nodejs;
         rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
         rustPlatform = pkgs.makeRustPlatform {
           cargo = rustToolchain;
           rustc = rustToolchain;
         };
         object = rustPlatform.buildRustPackage {
-          pname = "object";
+          pname = "object-server";
           version = "0.1.0";
           src = ./.;
+          cargoBuildFlags = ["-p" "object-server"];
           cargoLock.lockFile = ./Cargo.lock;
         };
         keelCli = keel.packages.${system}.default;
@@ -55,6 +57,7 @@
             pkgs.just
             pkgs.pkg-config
             pkgs.cargo-nextest
+            nodejs24
             keelCli
           ];
         };

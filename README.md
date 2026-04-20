@@ -102,7 +102,10 @@ Object uses native bridges for movement of external assets in and out of the Obj
 
 ## Repository structure
 
-- `src/`: Rust runtime and protocol implementation.
+- `crates/object-server/`: Rust API server (Axum) with workspace-friendly Exchange API handlers.
+- `crates/object-api/`: Shared Rust API/domain models used by server and downstream Rust services.
+- `api/openapi/object-openapi.json`: OpenAPI contract for all Object APIs.
+- `frontend/`: TanStack/React client that consumes the Object API specification.
 - `flake.nix`: Nix development shell with Rust toolchain and project tooling.
 - `justfile`: Common local commands for formatting, linting, and testing.
 
@@ -119,12 +122,29 @@ Object is in early-stage development and is evolving quickly. The codebase curre
 From the repository root:
 
 - `nix develop`
-- `just build`
+- `just build` (workspace)
+- `just build-server`
+- `just build-frontend`
 
 ## Running tests
 
 - `just test`
-`just test` is configured to treat “no tests present” as a non-failing state during early bootstrapping.
+`just test` uses `cargo nextest` and is configured to treat an empty test set as a pass during early bootstrapping.
+
+## Running the exchange stack
+
+- `just run-server` starts the Rust API server at `http://localhost:3000`.
+- `just run-frontend` starts the React app at `http://localhost:5173` and proxies `/api` to `http://localhost:3000`.
+- `nix develop` provides Node.js 24 via the shell package set.
+
+For a single-command local stack run `just dev` (server and frontend).
+
+The OpenAPI document is consumed by the frontend through `/api/openapi.json` and the static
+spec at `api/openapi/object-openapi.json`.
+
+Generate frontend TypeScript API types from the OpenAPI contract with:
+
+- `cd frontend && npm run gen:types`
 
 ## Contributing
 
